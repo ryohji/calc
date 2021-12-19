@@ -5,7 +5,8 @@
 namespace {
 
 double eval(const std::string &expr) {
-    return 1;
+    char *p;
+    return std::strtod(expr.c_str(), &p);
 }
 
 } // namespace
