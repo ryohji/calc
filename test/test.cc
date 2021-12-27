@@ -38,7 +38,7 @@ class nagate : public expr {
 
   public:
     nagate(const expr_ptr v) : v(v) {}
-    double value() const { return -v->value(); }
+    double value() const { return -1 * v->value(); }
 };
 
 class plus : public expr {
@@ -47,11 +47,6 @@ class plus : public expr {
   public:
     plus(const expr_ptr a, const expr_ptr b) : a(a), b(b) {}
     double value() const { return a->value() + b->value(); }
-};
-
-class minus : public plus {
-  public:
-    minus(const expr_ptr a, const expr_ptr b) : plus(a, expr_ptr(new nagate(b))) {}
 };
 
 template <typename FwrdIt>
@@ -73,7 +68,7 @@ parsed_type<FwrdIt> parse(FwrdIt begin, FwrdIt end) {
         } else if (token.compare("-") == 0) {
             auto a = parse(++begin, end);
             auto b = parse(a.iter, end);
-            return {b.iter, expr_ptr(new minus(a.expr, b.expr))};
+            return {b.iter, expr_ptr(new plus(a.expr, expr_ptr(new nagate(b.expr))))};
         } else {
             char *p;
             const auto value = std::strtod(token.c_str(), &p);
@@ -90,9 +85,8 @@ parsed_type<FwrdIt> parse(FwrdIt begin, FwrdIt end) {
 
 double eval(const std::string &expr) {
     auto list = tokenize(expr);
-    auto end = std::end(list);
-    auto parsed = parse(std::begin(list), end);
-    if (parsed.iter == end) {
+    auto parsed = parse(std::begin(list), std::end(list));
+    if (parsed.iter == std::end(list)) {
         return parsed.expr->value();
     } else {
         auto os = std::ostringstream();
@@ -156,13 +150,6 @@ TEST(Expression, evaluete_plus_comma1_comma1) {
     auto a = expr_ptr(new number(0.1));
     auto b = expr_ptr(new number(0.1));
     ASSERT_EQ(0.2, plus(a, b).value());
-}
-
-TEST(Expression, evaluete_plus_minus_0_1_1) {
-    auto o = expr_ptr(new number(0));
-    auto e = expr_ptr(new number(1));
-    auto m = expr_ptr(new minus(o, e));
-    ASSERT_EQ(0, plus(m, e).value());
 }
 
 TEST(Expression, evaluate_parsed_plus_minus_0_1_1) {
