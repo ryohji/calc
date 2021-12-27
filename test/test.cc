@@ -33,6 +33,14 @@ class number : public expr {
     double value() const { return v; }
 };
 
+class nagate : public expr {
+    const expr_ptr v;
+
+  public:
+    nagate(const expr_ptr v) : v(v) {}
+    double value() const { return -v->value(); }
+};
+
 class plus : public expr {
     const expr_ptr a, b;
 
@@ -41,12 +49,9 @@ class plus : public expr {
     double value() const { return a->value() + b->value(); }
 };
 
-class minus : public expr {
-    const expr_ptr a, b;
-
+class minus : public plus {
   public:
-    minus(const expr_ptr a, const expr_ptr b) : a(a), b(b) {}
-    double value() const { return a->value() - b->value(); }
+    minus(const expr_ptr a, const expr_ptr b) : plus(a, expr_ptr(new nagate(b))) {}
 };
 
 template <typename FwrdIt>
