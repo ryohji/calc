@@ -37,6 +37,12 @@ static inline node_t *node_dup(node_t node) {
     return p;
 }
 
+static inline void print_error(int error) {
+    char message[1024];
+    strerror_r(error, message, sizeof(message));
+    fputs(message, stderr);
+}
+
 node_t *node_new_number(double value) {
     return node_dup((node_t){.type = NODE_NUMBER, .reference = 1, .data.number = {value}});
 }
@@ -63,12 +69,34 @@ double node_value(node_t const *node) {
     case NODE_ADDITION:
         return node_value(node->data.pair.a) + node_value(node->data.pair.b);
 
-    default: {
-        char message[1024];
-        strerror_r(EINVAL, message, sizeof(message));
-        fputs(message, stderr);
+    default:
+        print_error(EINVAL);
         exit(1);
-    } break;
+        break;
+    }
+}
+
+void node_fwrite(FILE *fp, node_t const *node) {
+    switch (node->type) {
+    case NODE_NUMBER:
+        fprintf(fp, "%lf ", node->data.number.value);
+        break;
+
+    case NODE_NAGATION:
+        fputs("negate ", fp);
+        node_fwrite(fp, node->data.node);
+        break;
+
+    case NODE_ADDITION:
+        fputs("+ ", fp);
+        node_fwrite(fp, node->data.pair.a);
+        node_fwrite(fp, node->data.pair.b);
+        break;
+
+    default:
+        print_error(EINVAL);
+        exit(1);
+        break;
     }
 }
 
