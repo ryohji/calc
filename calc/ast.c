@@ -7,11 +7,17 @@
 
 enum node_type {
     NODE_NUMBER,
-    NODE_NAGATE,
+    NODE_NAGATION,
+    NODE_ADDITION,
 };
 
 struct node_number {
     double const value;
+};
+
+struct node_pair {
+    node_t *const a;
+    node_t *const b;
 };
 
 struct node {
@@ -21,7 +27,8 @@ struct node {
     union {
         struct node_number const number;
         node_t *const node;
-    } value;
+        struct node_pair const pair;
+    } data;
 };
 
 static inline node_t *node_dup(node_t node) {
@@ -31,21 +38,30 @@ static inline node_t *node_dup(node_t node) {
 }
 
 node_t *node_new_number(double value) {
-    return node_dup((node_t){.type = NODE_NUMBER, .reference = 1, .value.number = {value}});
+    return node_dup((node_t){.type = NODE_NUMBER, .reference = 1, .data.number = {value}});
 }
 
 node_t *node_new_negation(node_t *node) {
     node_addref(node);
-    return node_dup((node_t){.type = NODE_NAGATE, .reference = 1, .value.node = node});
+    return node_dup((node_t){.type = NODE_NAGATION, .reference = 1, .data.node = node});
+}
+
+node_t *node_new_addition(node_t *a, node_t *b) {
+    node_addref(a);
+    node_addref(b);
+    return node_dup((node_t){.type = NODE_ADDITION, .reference = 1, .data.pair = {a, b}});
 }
 
 double node_value(node_t const *node) {
     switch (node->type) {
     case NODE_NUMBER:
-        return node->value.number.value;
+        return node->data.number.value;
 
-    case NODE_NAGATE:
-        return -node_value(node->value.node);
+    case NODE_NAGATION:
+        return -node_value(node->data.node);
+
+    case NODE_ADDITION:
+        return node_value(node->data.pair.a) + node_value(node->data.pair.b);
 
     default: {
         char message[1024];
@@ -62,8 +78,18 @@ void node_addref(node_t *node) {
 
 void node_release(node_t *node) {
     if (--node->reference == 0) {
-        if (node->type == NODE_NAGATE) {
-            node_release(node->value.node);
+        switch (node->type) {
+        case NODE_NAGATION:
+            node_release(node->data.node);
+            break;
+
+        case NODE_ADDITION:
+            node_release(node->data.pair.a);
+            node_release(node->data.pair.b);
+            break;
+
+        default:
+            break;
         }
         free(node);
     }
